@@ -1,12 +1,25 @@
 package distill.raft;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.*;
-
-import static distill.raft.Actions.*;
-import static distill.raft.Events.*;
+import distill.raft.Action.CancelAlarm;
+import static distill.raft.Action.ELECTION;
+import distill.raft.Action.Send;
+import distill.raft.Action.SetAlarm;
+import static distill.raft.Actions.NO_ACTIONS;
+import static distill.raft.Events.APPEND_REQ;
+import static distill.raft.Events.APPEND_RESP;
+import static distill.raft.Events.CMD_REQ;
+import static distill.raft.Events.TIMEOUT;
+import static distill.raft.Events.VOTE_REQ;
+import static distill.raft.Events.VOTE_RESP;
 
 enum Status {
     LEADER,
@@ -116,17 +129,39 @@ public class Raft {
         actions.add(new SetAlarm(ELECTION));
         status = Status.FOLLOWER;
         followers = null;
-        //TODO: reset votedFor and numVotes
+        //reset votedFor and numVotes
+        // DONE
+        votedFor = null;
+        numVotes = 0;
         return actions; // There will be actions in a later exercise.
     }
 
     Actions becomeCandidate() {
-        // TODO: cancel all timers
-        // TODO: increment term if not already a candidate., change status to CANDIDATE
-        // TODO: SendAction voteReq message (see mkVoteReqMsg for boilerplate) to all siblings
-        // TODO: remember to vote for oneself.
-        // TODO: reset election timer
-        ???
+        //  cancel all timers
+        //  increment term if not already a candidate., change status to CANDIDATE
+        //  SendAction voteReq message (see mkVoteReqMsg for boilerplate) to all siblings
+        // remember to vote for oneself.
+        // reset election timer
+        
+        Actions actions = cancelAllTimers();
+
+        
+        if (!isCandidate()) {
+            term++;
+        } 
+        status = Status.CANDIDATE;
+    
+        
+        for (var sibling: siblings) {
+            actions.add(mkVoteReqMsg(sibling, logTermBeforeIndex(log.length())));
+        }
+
+        actions.add(new SetAlarm(ELECTION));
+        numVotes = 1;
+        votedFor = myId;
+        actions.add(new CancelAlarm(ELECTION));
+        actions.add(new SetAlarm(ELECTION));
+
         return actions;
     }
 
@@ -141,15 +176,18 @@ public class Raft {
 
     Action mkVoteReqMsg(String to, int lastLogTerm) {
         assert !isLeader();
-
-        var msg = mkMsg(
-                // TODO: make message with fields
+                // make message with fields
                 //      from, to, type, term, log_length, last_log_term
-                ???
-        );
+        var msg = mkMsg("from", myId,
+                "to", to,
+                "type", VOTE_REQ,
+                "term", term,
+                "last_log_term", lastLogTerm,
+                "log_length", log.length()
+                );
+ 
         return new Send(msg);
     }
-
 
     public Action mkReply(JSONObject msg, Object... extraKeyValues) {
         JSONObject reply = mkMsg(
@@ -303,14 +341,27 @@ public class Raft {
 
     Action onVoteReq(JSONObject msg) {
         var voteGranted = false;
-        // TODO: Reply "vote_granted" == true
+        //  Reply "vote_granted" == true
         //    if votedFor is null and
         //         either msg["last_log_term"] > this.lastLogTerm
         //        or     msg["last_log_term"] == this.lastLogTerm && msg["log_length"] >= this.logLength
-        // TODO: In all other cases, "vote_granted" == false
-        // TODO: reply using mkReply(msg)
-        // TODO: If vote is granted, set votedFor.
-        ???
+        // In all other cases, "vote_granted" == false
+        // reply using mkReply(msg)
+        // If vote is granted, set votedFor.
+        
+        if (votedFor == null) {
+            int lastLogTerm = msg.getInt("last_log_term");
+            int logTermBeforeIndex = this.logTermBeforeIndex(log.length());
+            int logLength = msg.getInt("log_length");
+
+            voteGranted = (lastLogTerm > logTermBeforeIndex) || 
+                  (lastLogTerm == logTermBeforeIndex && logLength >= log.length());
+        }
+
+        if (voteGranted) {
+            votedFor = msg.getString("from");
+        }
+        
         return mkReply(msg, "vote_granted", voteGranted);
     }
 
@@ -319,7 +370,11 @@ public class Raft {
         if (isCandidate()) {
             //     if ++numVotes meets quorum sizes, become leader
             //     return appropriate actions from becoming leader
-            ?????
+            ++numVotes;
+            if (numVotes >= quorumSize) {
+                actions = becomeLeader();
+            }
+
         }
         return actions;
     }

@@ -1,3 +1,4 @@
+
 package distill.log_kvs;
 
 import org.json.JSONArray;
@@ -181,7 +182,7 @@ public class Raft {
         assert isLeader();
         //TODO: IMPLEMENT ABOVE.
         //return true if numCommitted was changed.
-        throw new RuntimeException("UNIMPLEMENTED");
+        // retur
         return retval;
     }
 

@@ -1,7 +1,19 @@
 package distill.raft;
-import java.util.*;
-import static distill.Utils.*;
-import static distill.raft.Actions.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Timer;
+
+import static distill.Utils.info;
+import static distill.Utils.nodeId;
+import static distill.Utils.recv;
+import static distill.Utils.send;
+import static distill.Utils.setTimeout;
+import static distill.Utils.siblingNodes;
+import distill.raft.Action.CancelAlarm;
+import static distill.raft.Action.ELECTION;
+import distill.raft.Action.Send;
+import distill.raft.Action.SetAlarm;
 
 public class Server {
     final Raft raft;
@@ -37,9 +49,9 @@ public class Server {
                 }
                 double durationSec;
                 if (name.equals(ELECTION)) {
-                    // TODO: durationSec is some random number between
+                    //  durationSec is some random number between
                     //    ELECTION_DURATION_SEC and 2 * ELECTION_DURATION_SEC
-                    durationSec = ???
+                    durationSec = ELECTION_DURATION_SEC + Math.random() * ELECTION_DURATION_SEC;
                 } else {
                     durationSec = HEARTBEAT_DURATION_SEC;
                 }
