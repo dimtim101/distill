@@ -182,7 +182,6 @@ public class Raft {
         assert isLeader();
         //TODO: IMPLEMENT ABOVE.
         //return true if numCommitted was changed.
-        // retur
         return retval;
     }
 
